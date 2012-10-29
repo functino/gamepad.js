@@ -1,60 +1,103 @@
 listeners = {}
 window.gamepad = 
   isSupported: ->
-    !!navigator.webkitGetGamepads || !!navigator.webkitGamepads
+    getAll() != undefined
+  get: (index) ->
+    return getAll()[index] if index?
+    getAll()
+  getAll: ->
+    navigator.webkitGamepads || navigator.mozGamepads || navigator.gamepads
   BUTTONS: 
-    FACE_1: 0, # Face (main) buttons
-    FACE_2: 1,
-    FACE_3: 2,
-    FACE_4: 3,
-    LEFT_SHOULDER: 4, # Top shoulder buttons
-    RIGHT_SHOULDER: 5,
-    LEFT_SHOULDER_BOTTOM: 6, # Bottom shoulder buttons
-    RIGHT_SHOULDER_BOTTOM: 7,
-    SELECT: 8,
-    START: 9,
-    LEFT_STICK: 10, # Analogue sticks (if depressible)
-    RIGHT_STICK: 11,
-    PAD_TOP: 12, # Directional (discrete) pad
-    PAD_BOTTOM: 13,
-    PAD_LEFT: 14,
-    PAD_RIGHT: 15
+    face1: 0, # Face (main) buttons
+    face2: 1,
+    face3: 2,
+    face4: 3,
+    leftShoulder: 4, # Top shoulder buttons
+    rightShoulder: 5,
+    leftShoulderBottom: 6, # Bottom shoulder buttons
+    rightShoulderBottom: 7,
+    select: 8,
+    start: 9,
+    leftStick: 10, # Analogue sticks (if depressible)
+    rightStick: 11,
+    up: 12, # Directional (discrete) pad
+    down: 13,
+    left: 14,
+    right: 15
   AXES:
-    LEFT_STICK_HOR: 0,
-    LEFT_STICK_VERT: 1,
-    RIGHT_STICK_HOR: 2,
-    RIGHT_STICK_VERT: 3  
+    leftStickX: 0,
+    leftStickY: 1,
+    rightStickX: 2,
+    rightStickY: 3  
   on: (event, callback) ->
     listeners[event] ?= [] 
     listeners[event].push(callback)
-  fire: (event, value) ->
-  	return unless listeners[event]?
-  	for callback in listeners[event]
-  	  callback(value: value, event: event)
+  fire: (event, data) ->
+    data ?= {}
+    list = event.split(":")
+    events = [
+      event   # "1:change:LEFT"
+      list[1] # "change"
+      list[1] + ":" + list[2] # "change:LEFT"
+      list[0] + list[1] # "1:change"
+    ]
+
+    for event in events
+      if listeners[event]?
+        for callback in listeners[event]
+          data.event = event
+          data.button = list[2]
+          data.state = 
+            pad: padStatus
+            axes: axesStatus
+          callback(data)
+
+for pad in [0..3]
+  gamepad[pad] = 
+    on: (event, callback) ->
+      gamepad.on "#{pad}:#{event}", callback
 
 checkForGamePad = null
-padStatus = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-axesStatus = [0, 0, 0, 0]
-setupGamepad = (pad) ->
-  console.log("setting up gamepad")
-  requestAnimationFrame(checkButtons)
-  gamepad.fire("ready", {})
+padStatus = [
+  [[0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0]]
+  [[0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0]]
+  [[0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0]]
+  [[0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0], [0,0]]
+]
+axesStatus = [
+  [0, 0, 0, 0]
+  [0, 0, 0, 0]
+  [0, 0, 0, 0]
+  [0, 0, 0, 0]
+]  
   
 checkButtons = ->
-  pad = navigator.webkitGetGamepads()[0]
-  for name, index of gamepad.BUTTONS
-    if padStatus[index] != pad.buttons[index]
-      padStatus[index] = pad.buttons[index]
-      gamepad.fire(name, pad.buttons[index])
-  for name, index of gamepad.AXES
-    if 0.1 < Math.abs(axesStatus[index] - pad.axes[index])
-      axesStatus[index] = pad.axes[index]
-      gamepad.fire(name, pad.axes[index])          
+  for padNumber in [0..3]
+    pad = gamepad.get(padNumber)
+    if pad != undefined
+      for name, index of gamepad.BUTTONS
+        if padStatus[padNumber][index][0] != pad.buttons[index]
+          padStatus[padNumber][index][0] = pad.buttons[index]
+          normalized = if pad.buttons[index] > 1 - 0.07 then 1 else 0
+          data = value: pad.buttons[index], normalizedValue: normalized, pad: padNumber          
+          if normalized != padStatus[padNumber][index][1]
+            padStatus[padNumber][index][1] = normalized
+            event = if normalized == 1 then "press" else "release"
+            gamepad.fire("#{padNumber}:#{event}:#{name}", data)
+          gamepad.fire("#{padNumber}:change:#{name}", data)
+      for name, index of gamepad.AXES
+        if 0.07 < Math.abs(axesStatus[index] - pad.axes[index])
+          axesStatus[padNumber][index] = pad.axes[index]
+          data = value: pad.axes[index], pad: padNumber
+          gamepad.fire("#{padNumber}:change:#{name}", data)
   requestAnimationFrame(checkButtons)          
+
 checkForGamePad = ->
-  pad = navigator.webkitGetGamepads()[0]
+  pad = gamepad.get(0)
   if pad?
-    setupGamepad(pad)
+    console.log("setting up gamepad")
+    requestAnimationFrame(checkButtons)
+    gamepad.fire("ready", {})
   else
     setTimeout(checkForGamePad, 1000)
 

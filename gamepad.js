@@ -1,33 +1,42 @@
 (function() {
-  var axesStatus, checkButtons, checkForGamePad, listeners, padStatus, setupGamepad;
+  var axesStatus, checkButtons, checkForGamePad, listeners, pad, padStatus;
   listeners = {};
   window.gamepad = {
     isSupported: function() {
-      return !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
+      return getAll() !== void 0;
+    },
+    get: function(index) {
+      if (index != null) {
+        return getAll()[index];
+      }
+      return getAll();
+    },
+    getAll: function() {
+      return navigator.webkitGamepads || navigator.mozGamepads || navigator.gamepads;
     },
     BUTTONS: {
-      FACE_1: 0,
-      FACE_2: 1,
-      FACE_3: 2,
-      FACE_4: 3,
-      LEFT_SHOULDER: 4,
-      RIGHT_SHOULDER: 5,
-      LEFT_SHOULDER_BOTTOM: 6,
-      RIGHT_SHOULDER_BOTTOM: 7,
-      SELECT: 8,
-      START: 9,
-      LEFT_STICK: 10,
-      RIGHT_STICK: 11,
-      PAD_TOP: 12,
-      PAD_BOTTOM: 13,
-      PAD_LEFT: 14,
-      PAD_RIGHT: 15
+      face1: 0,
+      face2: 1,
+      face3: 2,
+      face4: 3,
+      leftShoulder: 4,
+      rightShoulder: 5,
+      leftShoulderBottom: 6,
+      rightShoulderBottom: 7,
+      select: 8,
+      start: 9,
+      leftStick: 10,
+      rightStick: 11,
+      up: 12,
+      down: 13,
+      left: 14,
+      right: 15
     },
     AXES: {
-      LEFT_STICK_HOR: 0,
-      LEFT_STICK_VERT: 1,
-      RIGHT_STICK_HOR: 2,
-      RIGHT_STICK_VERT: 3
+      leftStickX: 0,
+      leftStickY: 1,
+      rightStickX: 2,
+      rightStickY: 3
     },
     on: function(event, callback) {
       var _ref;
@@ -38,57 +47,96 @@
       };
       return listeners[event].push(callback);
     },
-    fire: function(event, value) {
-      var callback, _i, _len, _ref, _results;
-      if (listeners[event] == null) {
-        return;
-      }
-      _ref = listeners[event];
+    fire: function(event, data) {
+      var callback, events, list, _i, _len, _results;
+            if (data != null) {
+        data;
+      } else {
+        data = {};
+      };
+      list = event.split(":");
+      events = [event, list[1], list[1] + ":" + list[2], list[0] + list[1]];
       _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        callback = _ref[_i];
-        _results.push(callback({
-          value: value,
-          event: event
-        }));
+      for (_i = 0, _len = events.length; _i < _len; _i++) {
+        event = events[_i];
+        _results.push((function() {
+          var _j, _len2, _ref, _results2;
+          if (listeners[event] != null) {
+            _ref = listeners[event];
+            _results2 = [];
+            for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+              callback = _ref[_j];
+              data.event = event;
+              data.button = list[2];
+              data.state = {
+                pad: padStatus,
+                axes: axesStatus
+              };
+              _results2.push(callback(data));
+            }
+            return _results2;
+          }
+        })());
       }
       return _results;
     }
   };
-  checkForGamePad = null;
-  padStatus = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  axesStatus = [0, 0, 0, 0];
-  setupGamepad = function(pad) {
-    console.log("setting up gamepad");
-    requestAnimationFrame(checkButtons);
-    return gamepad.fire("ready", {});
-  };
-  checkButtons = function() {
-    var index, name, pad, _ref, _ref2;
-    pad = navigator.webkitGetGamepads()[0];
-    _ref = gamepad.BUTTONS;
-    for (name in _ref) {
-      index = _ref[name];
-      if (padStatus[index] !== pad.buttons[index]) {
-        padStatus[index] = pad.buttons[index];
-        gamepad.fire(name, pad.buttons[index]);
+  for (pad = 0; pad <= 3; pad++) {
+    gamepad[pad] = {
+      on: function(event, callback) {
+        return gamepad.on("" + pad + ":" + event, callback);
       }
-    }
-    _ref2 = gamepad.AXES;
-    for (name in _ref2) {
-      index = _ref2[name];
-      if (0.1 < Math.abs(axesStatus[index] - pad.axes[index])) {
-        axesStatus[index] = pad.axes[index];
-        gamepad.fire(name, pad.axes[index]);
+    };
+  }
+  checkForGamePad = null;
+  padStatus = [[[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]];
+  axesStatus = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+  checkButtons = function() {
+    var data, event, index, name, normalized, padNumber, _ref, _ref2;
+    for (padNumber = 0; padNumber <= 3; padNumber++) {
+      pad = gamepad.get(padNumber);
+      if (pad !== void 0) {
+        _ref = gamepad.BUTTONS;
+        for (name in _ref) {
+          index = _ref[name];
+          if (padStatus[padNumber][index][0] !== pad.buttons[index]) {
+            padStatus[padNumber][index][0] = pad.buttons[index];
+            normalized = pad.buttons[index] > 1 - 0.07 ? 1 : 0;
+            data = {
+              value: pad.buttons[index],
+              normalizedValue: normalized,
+              pad: padNumber
+            };
+            if (normalized !== padStatus[padNumber][index][1]) {
+              padStatus[padNumber][index][1] = normalized;
+              event = normalized === 1 ? "press" : "release";
+              gamepad.fire("" + padNumber + ":" + event + ":" + name, data);
+            }
+            gamepad.fire("" + padNumber + ":change:" + name, data);
+          }
+        }
+        _ref2 = gamepad.AXES;
+        for (name in _ref2) {
+          index = _ref2[name];
+          if (0.07 < Math.abs(axesStatus[index] - pad.axes[index])) {
+            axesStatus[padNumber][index] = pad.axes[index];
+            data = {
+              value: pad.axes[index],
+              pad: padNumber
+            };
+            gamepad.fire("" + padNumber + ":change:" + name, data);
+          }
+        }
       }
     }
     return requestAnimationFrame(checkButtons);
   };
   checkForGamePad = function() {
-    var pad;
-    pad = navigator.webkitGetGamepads()[0];
+    pad = gamepad.get(0);
     if (pad != null) {
-      return setupGamepad(pad);
+      console.log("setting up gamepad");
+      requestAnimationFrame(checkButtons);
+      return gamepad.fire("ready", {});
     } else {
       return setTimeout(checkForGamePad, 1000);
     }
