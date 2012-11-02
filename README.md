@@ -91,9 +91,8 @@ AXES:
 ```
 
 ##TODO
-- include requestAnimationFrame polyfill
 - normalize values
 - add something like gamepad.on("LEFTSTICK", function(data) { console.log(data.x, data.y)});
-- add something like gamepad.digital("LEFT_SHOULDER_BOTTOM", function(data) { console.log(data.value); /*returns only 1 or 0*/});
-- make it usable with more then 1 gamepad
-- add keyUp/keyDown-like events
+- make it work with different controllers. It seems like on HAMA/ps3-controllers the dpad is an "axes" and the face buttons are ordered differently and so on... Maybe add a translation-map for different controllers
+- make shortcuts for names like "leftShoulderBottom" => "LT"
+- improve the initialisation

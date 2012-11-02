@@ -1,12 +1,33 @@
 listeners = {}
+
+vendors = ['ms', 'moz', 'webkit', 'o'];
+
+# make requestAnimationFrame and getGamepads available without vendor prefix
+requestAnimationFrame = window.requestAnimationFrame
+for vendor in vendors
+  unless requestAnimationFrame?
+    requestAnimationFrame = window["#{vendor}RequestAnimationFrame"]
+  unless navigator.getGamepads?
+    navigator.getGamepads = navigator["#{vendor}GetGamepads"]  
+
+# polyfill for requestAnimationFrame
+if !requestAnimationFrame
+  lastTime = 0;
+  requestAnimationFrame = (callback, element) ->
+    currTime = new Date().getTime();
+    timeToCall = Math.max(0, 16 - (currTime - lastTime));
+    id = window.setTimeout( ( -> callback(currTime + timeToCall) ), timeToCall)
+    lastTime = currTime + timeToCall
+
+# exported gamepad object
 window.gamepad = 
   isSupported: ->
-    getAll() != undefined
+    navigator.getGamepads?
   get: (index) ->
-    return getAll()[index] if index?
-    getAll()
+    return gamepad.getAll()[index] if index?
+    gamepad.getAll()
   getAll: ->
-    navigator.webkitGamepads || navigator.mozGamepads || navigator.gamepads
+    navigator.getGamepads()
   BUTTONS: 
     face1: 0, # Face (main) buttons
     face2: 1,
@@ -71,6 +92,7 @@ axesStatus = [
   [0, 0, 0, 0]
 ]  
   
+deadZone = 0.07
 checkButtons = ->
   for padNumber in [0..3]
     pad = gamepad.get(padNumber)
@@ -78,7 +100,7 @@ checkButtons = ->
       for name, index of gamepad.BUTTONS
         if padStatus[padNumber][index][0] != pad.buttons[index]
           padStatus[padNumber][index][0] = pad.buttons[index]
-          normalized = if pad.buttons[index] > 1 - 0.07 then 1 else 0
+          normalized = if pad.buttons[index] > 1 - deadZone then 1 else 0
           data = value: pad.buttons[index], normalizedValue: normalized, pad: padNumber          
           if normalized != padStatus[padNumber][index][1]
             padStatus[padNumber][index][1] = normalized
@@ -86,7 +108,7 @@ checkButtons = ->
             gamepad.fire("#{padNumber}:#{event}:#{name}", data)
           gamepad.fire("#{padNumber}:change:#{name}", data)
       for name, index of gamepad.AXES
-        if 0.07 < Math.abs(axesStatus[index] - pad.axes[index])
+        if deadZone < Math.abs(axesStatus[padNumber][index] - pad.axes[index])
           axesStatus[padNumber][index] = pad.axes[index]
           data = value: pad.axes[index], pad: padNumber
           gamepad.fire("#{padNumber}:change:#{name}", data)
@@ -99,6 +121,7 @@ checkForGamePad = ->
     requestAnimationFrame(checkButtons)
     gamepad.fire("ready", {})
   else
+    console.log("next")
     setTimeout(checkForGamePad, 1000)
 
 gamepad.init = (callback) -> 

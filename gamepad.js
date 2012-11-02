@@ -1,18 +1,41 @@
 (function() {
-  var axesStatus, checkButtons, checkForGamePad, listeners, pad, padStatus;
+  var axesStatus, checkButtons, checkForGamePad, deadZone, lastTime, listeners, pad, padStatus, requestAnimationFrame, vendor, vendors, _i, _len;
   listeners = {};
+  vendors = ['ms', 'moz', 'webkit', 'o'];
+  requestAnimationFrame = window.requestAnimationFrame;
+  for (_i = 0, _len = vendors.length; _i < _len; _i++) {
+    vendor = vendors[_i];
+    if (requestAnimationFrame == null) {
+      requestAnimationFrame = window["" + vendor + "RequestAnimationFrame"];
+    }
+    if (navigator.getGamepads == null) {
+      navigator.getGamepads = navigator["" + vendor + "GetGamepads"];
+    }
+  }
+  if (!requestAnimationFrame) {
+    lastTime = 0;
+    requestAnimationFrame = function(callback, element) {
+      var currTime, id, timeToCall;
+      currTime = new Date().getTime();
+      timeToCall = Math.max(0, 16 - (currTime - lastTime));
+      id = window.setTimeout((function() {
+        return callback(currTime + timeToCall);
+      }), timeToCall);
+      return lastTime = currTime + timeToCall;
+    };
+  }
   window.gamepad = {
     isSupported: function() {
-      return getAll() !== void 0;
+      return navigator.getGamepads != null;
     },
     get: function(index) {
       if (index != null) {
-        return getAll()[index];
+        return gamepad.getAll()[index];
       }
-      return getAll();
+      return gamepad.getAll();
     },
     getAll: function() {
-      return navigator.webkitGamepads || navigator.mozGamepads || navigator.gamepads;
+      return navigator.getGamepads();
     },
     BUTTONS: {
       face1: 0,
@@ -48,7 +71,7 @@
       return listeners[event].push(callback);
     },
     fire: function(event, data) {
-      var callback, events, list, _i, _len, _results;
+      var callback, events, list, _j, _len2, _results;
             if (data != null) {
         data;
       } else {
@@ -57,15 +80,15 @@
       list = event.split(":");
       events = [event, list[1], list[1] + ":" + list[2], list[0] + list[1]];
       _results = [];
-      for (_i = 0, _len = events.length; _i < _len; _i++) {
-        event = events[_i];
+      for (_j = 0, _len2 = events.length; _j < _len2; _j++) {
+        event = events[_j];
         _results.push((function() {
-          var _j, _len2, _ref, _results2;
+          var _k, _len3, _ref, _results2;
           if (listeners[event] != null) {
             _ref = listeners[event];
             _results2 = [];
-            for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
-              callback = _ref[_j];
+            for (_k = 0, _len3 = _ref.length; _k < _len3; _k++) {
+              callback = _ref[_k];
               data.event = event;
               data.button = list[2];
               data.state = {
@@ -91,6 +114,7 @@
   checkForGamePad = null;
   padStatus = [[[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]];
   axesStatus = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+  deadZone = 0.07;
   checkButtons = function() {
     var data, event, index, name, normalized, padNumber, _ref, _ref2;
     for (padNumber = 0; padNumber <= 3; padNumber++) {
@@ -101,7 +125,7 @@
           index = _ref[name];
           if (padStatus[padNumber][index][0] !== pad.buttons[index]) {
             padStatus[padNumber][index][0] = pad.buttons[index];
-            normalized = pad.buttons[index] > 1 - 0.07 ? 1 : 0;
+            normalized = pad.buttons[index] > 1 - deadZone ? 1 : 0;
             data = {
               value: pad.buttons[index],
               normalizedValue: normalized,
@@ -118,7 +142,7 @@
         _ref2 = gamepad.AXES;
         for (name in _ref2) {
           index = _ref2[name];
-          if (0.07 < Math.abs(axesStatus[index] - pad.axes[index])) {
+          if (deadZone < Math.abs(axesStatus[padNumber][index] - pad.axes[index])) {
             axesStatus[padNumber][index] = pad.axes[index];
             data = {
               value: pad.axes[index],
@@ -138,6 +162,7 @@
       requestAnimationFrame(checkButtons);
       return gamepad.fire("ready", {});
     } else {
+      console.log("next");
       return setTimeout(checkForGamePad, 1000);
     }
   };

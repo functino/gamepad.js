@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Gamepad</title>
+  <script type="text/javascript" src="./gamepad.js"></script>
+  <script type="text/javascript">
+
+    gamepad.on("ready", function(){
+    	console.log("READY!");
+    });
+    gamepad.init();
+
+    gamepad.on("change:face1", function(data) {
+      if (data.value == 1) {
+        console.log("You pressed button 1. That's A on a XBOX controller");
+      } else {
+        console.log("You released button 1. That's A on a XBOX controller");
+      }
+    });
+
+    gamepad.on("press:face1", function(data) {
+      console.log("You pressed button 1. That's A on a XBOX controller");
+    }); 
+
+    gamepad.on("change:leftShoulderBottom", function(data) {
+      console.log(gamepad.get(0).axes)
+      console.log("You used the trigger. It's currently at: " + data.value);
+    });  
+
+    // if you're only interested in the actions of the first connected controller
+    gamepad.on("0:change:leftShoulderBottom", function(data) {
+      console.log("You used the trigger with the first controller. It's currently at: " + data.value);
+    }); 
+
+    // alternatively you can use this synthax to only set a listener for a specific controller
+    gamepad[2].on("change:leftShoulderBottom", function(data) {
+      console.log("You used the trigger with the third controller. It's currently at: " + data.value);
+    }); 
+
+    // you're only interested in "keyDown/keyUp" like events
+    // and don't want to do the normalization of "analogue" to digital yourself, use press/release
+    gamepad.on("press:leftShoulderBottom", function(data) {
+      console.log("You pressed the trigger all the way down");
+    }); 
+
+    gamepad.on("release:leftShoulderBottom", function(data) {
+      console.log("You released the trigger");
+    }); 
+
+    gamepad.on("press:leftStick", function(data) {
+      console.log("You pressed the left stick");
+    }); 
+
+    gamepad.on("change:leftStickX", function(data) {
+      console.log("You used your left stick horizontally. It's currently at: " + data.value);
+    });   
+    gamepad.on("change:leftStickY", function(data) {
+      console.log("You used your left stick vertically. It's currently at: " + data.value);
+    });   
+
+    gamepad.on("change:rightStickX", function(data) {
+      console.log("You used your right stick horizontally. It's currently at: " + data.value);
+    });   
+
+    gamepad.on("change:rightStickY", function(data) {
+      console.log("You used your right stick vertically. It's currently at: " + data.value);
+    });   
+
+
+    gamepad.on("change:up", function(data) {
+      console.log("You used up: " + data.value);
+    });
+  </script>
+</head>
+<body>  
+  Open your browser console....
+</body>
+</html>
